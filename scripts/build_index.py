@@ -205,7 +205,8 @@ def rawg_enrich(g,cache,budget):
     if not api_key:return
     if g.get('metadataSource')=='rawg':return
     name=g.get('name','')
-    if any(t in name.casefold() for t in ('fan game','online','remake','demake','browser port','mod')):return
+    if any(t in name.casefold() for t in ('fan game','fangame','fan-made','online','remake','demake','browser port','mod','randomizer','redux','recomp','decomp')):return
+    if label_kind(g) == 'fan_game': return
     k=canonical(name)
     if k in cache:info=cache[k]
     else:
