@@ -1,26 +1,37 @@
+
 name: Update game index
+
 on:
   workflow_dispatch:
   schedule:
     - cron: '17 4 * * *'
+
 permissions:
   contents: write
   pages: write
   id-token: write
+
 concurrency:
   group: gameport-index-and-deploy
   cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - uses: actions/setup-python@v5
+          ref: main
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Refresh catalogues, discover repositories and inspect links
         run: python scripts/build_index.py
         env:
@@ -31,22 +42,37 @@ jobs:
           MAX_REPO_ENRICH: '50'
           RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
           MAX_RAWG_ENRICH: '50'
+
       - name: Commit updated index
+        shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
           git add data/games.json data/repo_metadata_cache.json
-          if [ -f data/rawg_cache.json ]; then git add data/rawg_cache.json; fi
+
+          if [ -f data/rawg_cache.json ]; then
+            git add data/rawg_cache.json
+          fi
+
           if ! git diff --cached --quiet; then
             git commit -m 'chore: refresh and discover browser games'
-            git push
+
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          else
+            echo "No catalogue changes to commit."
           fi
-      - name: Configure Pages
+
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+
       - name: Upload current site
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+
       - name: Deploy refreshed catalogue
         id: deployment
         uses: actions/deploy-pages@v4
