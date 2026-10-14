@@ -127,6 +127,10 @@ KNOWN_PLATFORMS={
     'sonicmania':['PC'],
     'halocombatevolved':['Xbox','PC'],
     'callofdutymodernwarfare2':['PC','PS3','Xbox 360'],
+    'ratchetclank':['PS2'],
+    'starfoxadventures':['GameCube'],
+    'crashteamracingturbocharged':['PS1'],
+    'grandtheftautoiv':['PC','PS3','Xbox 360'],
 }
 
 def enrich_repo_metadata(g,cache,limit):
@@ -167,6 +171,54 @@ def check_link(url):
             return 'unknown'
     return 'unknown'
 
+# Optional licensed metadata enrichment: RAWG API (key kept in GitHub Actions secret).
+# Never guess that a similarly named result is the same game.
+RAWG_PLATFORMS={'playstation 2':'PS2','playstation 3':'PS3','playstation':'PS1',
+ 'playstation 4':'PS4','playstation 5':'PS5','psp':'PSP','ps vita':'PS Vita',
+ 'wii':'Wii','wii u':'Wii U','gamecube':'GameCube','nintendo ds':'Nintendo DS',
+ 'nintendo 3ds':'Nintendo 3DS','nintendo 64':'Nintendo 64','game boy advance':'GBA',
+ 'dreamcast':'Dreamcast','xbox 360':'Xbox 360','xbox one':'Xbox One','xbox series s/x':'Xbox Series',
+ 'pc':'PC','macos':'Mac','linux':'Linux','android':'Android','ios':'iOS'}
+
+def label_kind(g):
+    v=' '.join([g.get('name',''),g.get('description',''),' '.join(g.get('tags',[]))]).lower()
+    if re.search(r'\b(fan.?game|fan.?made|fangame)\b',v):return 'fan_game'
+    if re.search(r'\b(emulator|emulation|emulate|toolkit|sdk|engine only|library|framework|launcher)\b',v) and not g.get('demos'):return 'outil'
+    if re.search(r'\b(demo|prototype|tech demo|proof of concept|wip)\b',v):return 'demo'
+    if g.get('demos'):return 'lien_de_jeu'
+    return 'projet'
+
+def rawg_enrich(g,cache,budget):
+    api_key=os.environ.get('RAWG_API_KEY','').strip()
+    if not api_key:return
+    if g.get('metadataSource')=='rawg':return
+    name=g.get('name','')
+    if any(t in name.casefold() for t in ('fan game','online','remake','demake','browser port','mod')):return
+    k=canonical(name)
+    if k in cache:info=cache[k]
+    else:
+        if budget[0]<=0:return
+        budget[0]-=1
+        try:
+            query=urllib.parse.urlencode({'key':api_key,'search':name,'page_size':5,'search_precise':'true'})
+            resp=json.loads(request('https://api.rawg.io/api/games?'+query,timeout=12))
+            matching=next((r for r in resp.get('results',[]) if canonical(r.get('name',''))==k),None)
+            info={'found':bool(matching)}
+            if matching:
+                info['image']=matching.get('background_image','')
+                info['platforms']=[p.get('platform',{}).get('name','') for p in matching.get('platforms',[])]
+                info['rawgUrl']='https://rawg.io/games/'+matching.get('slug','') if matching.get('slug') else ''
+            cache[k]=info
+        except Exception as e:
+            print('Metadata lookup skipped:',name,str(e)[:80]);return
+    if not info.get('found'):return
+    im=safeurl(info.get('image'))
+    if im:g['coverImage']=im;g['metadataSource']='rawg'
+    # These are platforms of the ORIGINAL game, not necessarily of the browser port.
+    game_platforms=[RAWG_PLATFORMS[n.lower()] for n in info.get('platforms',[]) if n.lower() in RAWG_PLATFORMS]
+    g['originalPlatforms']=list(dict.fromkeys(g.get('originalPlatforms',[])+game_platforms))
+    if safeurl(info.get('rawgUrl','')):g['metadataUrl']=info['rawgUrl']
+
 def build():
     previous={}
     if DATA.exists():
@@ -193,6 +245,10 @@ def build():
     try:repo_cache=json.loads(metadata_path.read_text(encoding='utf-8'))
     except Exception:repo_cache={}
     repo_budget=[int(os.getenv('MAX_REPO_ENRICH','50'))]
+    rawg_path=ROOT/'data'/'rawg_cache.json'
+    try:rawg_cache=json.loads(rawg_path.read_text(encoding='utf-8'))
+    except Exception:rawg_cache={}
+    rawg_budget=[max(0,int(os.getenv('MAX_RAWG_ENRICH','50'))) ]
     for entry in incoming:
         key=canonical(entry['name'])
         if not key:continue
@@ -232,6 +288,12 @@ def build():
         enrich_repo_metadata(g,repo_cache,repo_budget)
         g['platforms']=list(dict.fromkeys(g['platforms']))
         g['type']='Lien de démonstration recensé' if g['demos'] else 'Dépôt / projet (non confirmé jouable)'
+        g['kind']=label_kind(g)
+        g['originalPlatforms']=list(dict.fromkeys(old.get('originalPlatforms',[]) if isinstance(old,dict) else []))
+        g['coverImage']=old.get('coverImage','') if isinstance(old,dict) else ''
+        g['metadataSource']=old.get('metadataSource','') if isinstance(old,dict) else ''
+        g['metadataUrl']=old.get('metadataUrl','') if isinstance(old,dict) else ''
+        rawg_enrich(g,rawg_cache,rawg_budget)
         if not g.get('image') and g['repos']:
             m=re.match(r'^https://github\.com/([^/]+)/([^/#?]+)',g['repos'][0])
             if m:g['image']='https://opengraph.githubassets.com/1/'+m[1]+'/'+m[2]
@@ -251,10 +313,11 @@ def build():
                     status=checks[url];fail=int(prev.get('failures',0))+1 if status=='error' else 0 if status=='responds' else int(prev.get('failures',0))
                     g['linkChecks'][url]={'status':'suspect' if fail>=3 else status,'failures':fail,'checkedAt':today}
     games=sorted(merged.values(),key=lambda x:x['name'].casefold())
-    obj={'version':2,'generatedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'total':len(games),'sources':stats,'games':games,'disclaimer':'Catalogue de liens tiers. Vérification HTTP ne prouve pas que le jeu est jouable. Pas de ROM hébergée.'}
+    obj={'version':3,'generatedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'total':len(games),'sources':stats,'games':games,'disclaimer':'Catalogue de liens tiers. Vérification HTTP ne prouve pas que le jeu est jouable. Pas de ROM hébergée.'}
     # Avoid replacing a healthy index with a tiny fallback after an outage.
     if not success and len(previous)>10:print('All external sources failed; existing index preserved',file=sys.stderr);return
     metadata_path.write_text(json.dumps(repo_cache,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+    if os.getenv('RAWG_API_KEY'):rawg_path.write_text(json.dumps(rawg_cache,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     DATA.write_text(json.dumps(obj,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     print(f'Built {len(games)} games ({sum(bool(g["archived"]) for g in games)} archived), {len(success)} successful feeds')
 if __name__=='__main__':build()
