@@ -108,7 +108,47 @@ def discover():
     return found,{'id':'github-discovery','name':'GitHub — découverte de projets','url':'https://github.com/search','count':count,'ok':not errors,'error':'; '.join(errors[:2])}
 
 def infer_platforms(description):
-    return [platform for platform,pattern in RULES if re.search(pattern,description,re.I)]
+    # Only infer from an explicit platform mention, not from an unrelated game title.
+    return [platform for platform,pattern in RULES if re.search(pattern,description or '',re.I)]
+
+# Small reviewed map: known releases; this does not infer that a given web project emulates them.
+KNOWN_PLATFORMS={
+    'dragonballzbudokaitenkaichi3':['PS2','Wii'],
+    'proevolutionsoccer6':['PS2','PC'],
+    'crashbashonline':['PS1'],
+    'crashteamracing':['PS1'],
+    'supermario64':['Nintendo 64'],
+    'ocarinaoftime':['Nintendo 64'],
+    'animalcrossing':['GameCube'],
+    'thesimpsonshitandrun':['PS2','PC'],
+    'grandtheftautovicecity':['PS2','PC'],
+    'grandtheftauto3':['PS2','PC'],
+    'tekken3':['PS1'],
+    'sonicmania':['PC'],
+    'halocombatevolved':['Xbox','PC'],
+    'callofdutymodernwarfare2':['PC','PS3','Xbox 360'],
+}
+
+def enrich_repo_metadata(g,cache,limit):
+    """Enrich a bounded number of GitHub projects per update; cached across runs."""
+    if not g['repos'] or g.get('description') or limit[0] <= 0:return
+    m=re.match(r'^https://github\.com/([^/]+)/([^/#?]+)',g['repos'][0])
+    if not m:return
+    key=(m[1]+'/'+m[2]).removesuffix('.git')
+    if key in cache:info=cache[key]
+    else:
+        if limit[0]<=0:return
+        limit[0]-=1
+        try:
+            info=json.loads(request('https://api.github.com/repos/'+key,timeout=9))
+            cache[key]={'description':info.get('description') or '', 'topics':info.get('topics') or [],'homepage':info.get('homepage') or ''}
+            info=cache[key]
+        except Exception:return
+    if info.get('description'):g['description']=info['description'][:350]
+    more=' '.join([info.get('description','')]+info.get('topics',[]))
+    g['platforms']=list(dict.fromkeys(g['platforms']+infer_platforms(more)))
+    if not g.get('projectUrl') and safeurl(info.get('homepage')):g['projectUrl']=info['homepage']
+
 
 def check_link(url):
     """A failed HTTP response is NOT a proof a game is unplayable."""
@@ -149,6 +189,10 @@ def build():
         rows,stat=discover();incoming.extend(rows);stats.append(stat)
         if stat['ok']:success.add('github-discovery')
     today=time.strftime('%Y-%m-%d',time.gmtime());merged={}
+    metadata_path=ROOT/'data'/'repo_metadata_cache.json'
+    try:repo_cache=json.loads(metadata_path.read_text(encoding='utf-8'))
+    except Exception:repo_cache={}
+    repo_budget=[int(os.getenv('MAX_REPO_ENRICH','50'))]
     for entry in incoming:
         key=canonical(entry['name'])
         if not key:continue
@@ -184,7 +228,9 @@ def build():
         elif watched and watched.issubset(success):
             g['missingCycles']=int(old.get('missingCycles',0))+1
             if g['missingCycles']>=3:g['archived']=True
-        g['platforms']=list(dict.fromkeys(g['platforms']+infer_platforms(g.get('description',''))))
+        g['platforms']=list(dict.fromkeys(g['platforms']+KNOWN_PLATFORMS.get(key,[])+infer_platforms(g.get('description',''))))
+        enrich_repo_metadata(g,repo_cache,repo_budget)
+        g['platforms']=list(dict.fromkeys(g['platforms']))
         g['type']='Lien de démonstration recensé' if g['demos'] else 'Dépôt / projet (non confirmé jouable)'
         if not g.get('image') and g['repos']:
             m=re.match(r'^https://github\.com/([^/]+)/([^/#?]+)',g['repos'][0])
@@ -208,6 +254,7 @@ def build():
     obj={'version':2,'generatedAt':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'total':len(games),'sources':stats,'games':games,'disclaimer':'Catalogue de liens tiers. Vérification HTTP ne prouve pas que le jeu est jouable. Pas de ROM hébergée.'}
     # Avoid replacing a healthy index with a tiny fallback after an outage.
     if not success and len(previous)>10:print('All external sources failed; existing index preserved',file=sys.stderr);return
+    metadata_path.write_text(json.dumps(repo_cache,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     DATA.write_text(json.dumps(obj,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     print(f'Built {len(games)} games ({sum(bool(g["archived"]) for g in games)} archived), {len(success)} successful feeds')
 if __name__=='__main__':build()
