@@ -56,3 +56,4 @@ Modifier `data/curated.json` :
 ```
 
 Ne pas intégrer de matériel protégé sans autorisation. Le site n'utilise pas de base de données payante.
+
