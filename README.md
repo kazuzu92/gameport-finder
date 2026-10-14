@@ -1,34 +1,58 @@
-# GamePort Finder 🎮
+# GamePort Finder V2 🎮
 
-Site statique autonome : recherche instantanée de ports de jeux pour navigateur, fusion de catalogues, favoris, filtres, lien de démo et lien GitHub. **Les liens répertoriés ne sont pas une garantie de jeu complet ou fonctionnel.** Aucun jeu ni ROM n'est hébergé.
+Moteur statique de jeux pour navigateur, déployable gratuitement sur GitHub Pages. **Aucun jeu, ROM, BIOS ni fichier de jeu n'est hébergé.** Les liens ne garantissent pas un jeu complet ou fonctionnel.
 
-## Sources (agrégation quotidienne)
+## Ce qui change en V2
 
-- [Ultimate Catalog of Web Game Ports](https://github.com/Carter54git/Ultimate-Catalog-Of-Web-Game-Ports)
-- [Awesome Decomp Games](https://github.com/SubmitGame/awesome-decomp-games)
-- [Awesome Browser Game Ports](https://github.com/bitburner/Awesome-Browser-Game-Ports)
-- `data/curated.json` : compléments manuels
+- Agrégation quotidienne des **trois catalogues existants**, avec conservation de la base actuelle.
+- **Découverte additionnelle de dépôts GitHub** par cinq requêtes d'API. Un dépôt découvert n'est **jamais** présenté comme un jeu jouable sans lien de démo issu d'une source fiable.
+- Recherche instantanée, favoris, filtre par console, par source et par état (actifs, suspects, archivés).
+- Description des projets, plateforme inférée **lorsque les mots-clés figurent dans la description**.
+- Aperçu visuel GitHub d'un dépôt lorsque disponible, **pas nécessairement une jaquette du jeu**. Des illustrations autorisées peuvent aussi être indiquées avec la clé `image` dans `data/curated.json`.
+- Vérification HTTP d'un échantillon de 120 liens par jour, rotation quotidienne. **3 réponses 404/410** déclenchent le statut « suspect » ; le HTTP ne prouve pas le fonctionnement du jeu.
+- Archivage intelligent : après **3 synchronisations réussies** au cours desquelles le jeu a disparu de toutes ses sources connues, il est masqué des résultats par défaut mais reste consultable par le filtre « Archivés ». Aucun effacement définitif.
+- Des sources GitHub ponctuellement indisponibles ne font jamais perdre la base précédente.
 
-Le script `scripts/build_index.py` utilise la bibliothèque standard Python, importe les tableaux Markdown, rapproche les noms et conserve les différents liens par jeu. Il préserve les données déjà disponibles lorsque certains catalogues sont temporairement inaccessibles. Plusieurs noms d'une même franchise peuvent rester distincts ; inversement les titres réellement différents portant le même nom peuvent être fusionnés. Les liens externes ne sont **pas testés en lançant les jeux**. Option facultative `CHECK_LINKS=1` : contrôle HTTP limité (qui ne prouve pas le bon fonctionnement du jeu).
+### Limites à connaître
 
-## Publication sur GitHub Pages
+- Pas d'API X/Twitter : les annonces X nécessitent un accès autorisé et ne sont pas collectées automatiquement.
+- Les portages PSP/PS2/PS3 ne sont **pas** systématiquement jouables ; le filtrage « console » dépend des métadonnées connues ou inférées.
+- Les jaquettes officielles pour tous les jeux et les vidéos ne sont **pas** fournies : utiliser des images autorisées, ajoutées au catalogue manuel.
+- Le contrôle automatique de lien teste l'accessibilité HTTP, pas le lancement réel des jeux. Un serveur qui bloque les robots peut apparaître « inconnu ».
+- La recherche GitHub peut renvoyer des bibliothèques et prototypes sans jeu jouable. Les fiches sans lien de démo sont marquées « projet ».
+- Une limite GitHub API ou un changement de format peut réduire la synchronisation. Les logs indiquent les échecs.
 
-1. Créer un dépôt GitHub **public** nommé `gameport-finder` et y transférer le contenu du dossier (fichiers à la racine du dépôt).
-2. Dans **Settings → Pages → Build and deployment**, sélectionner **Source: GitHub Actions**.
-3. Dans **Actions**, lancer une fois **Update game index → Run workflow** pour actualiser les données.
-4. Lancer **Deploy GitHub Pages** si nécessaire (le workflow se déclenche aussi à chaque commit sur la branche `main`).
-5. Le site sera accessible à `https://VOTRE-PSEUDO.github.io/gameport-finder/` lorsque GitHub aura confirmé le déploiement.
+## Mise à jour du dépôt existant `kazuzu92/gameport-finder`
 
-> Le workflow quotidien a besoin de `Settings → Actions → General → Workflow permissions → Read and write permissions` pour publier les nouveaux JSON sur la branche, ou d'une configuration de permissions équivalente autorisée par le dépôt. Il n'utilise aucun jeton personnel ni secret.
+**Important : conserver `data/games.json` sur GitHub, qui contient tes ~620 entrées.** Ce ZIP de mise à jour ne contient volontairement **pas** ce fichier. Ne supprime pas le dépôt et ne recrée pas le site.
 
-## Tester sur son PC
+Remplacer ou ajouter dans GitHub, en conservant les chemins :
 
-Depuis la racine du dossier : `python -m http.server 8000` puis ouvrir `http://localhost:8000/`. Ou lancer `python scripts/build_index.py` pour renouveler le fichier `data/games.json` si l'accès réseau est autorisé. Ouvrir `index.html` en double-cliquant peut bloquer le chargement du JSON selon le navigateur ; un serveur local est recommandé.
+1. `index.html`
+2. `scripts/build_index.py`
+3. `.github/workflows/update.yml`
+4. `README.md` (facultatif)
 
-## Sécurité et limites
+Conserver les fichiers existants `data/games.json`, `data/curated.json` et `.github/workflows/pages.yml`.
 
-- Liens HTTPS externes en nouveaux onglets avec `noopener noreferrer` ; aucune exécution de code des catalogues dans la page.
-- Pas de téléchargement de ROM, pas de scraping massif de GitHub, pas d'API X/Twitter.
-- La construction n'interroge que les sources configurées, **pas l'ensemble d'Internet**. Pour agrandir réellement la base, ajouter d'autres sources à `SOURCES` avec un parseur adapté, ou améliorer l'import de dépôts GitHub.
-- Vérifier les droits d'utilisation, les fichiers originaux requis et la fiabilité des liens avant de jouer.
-- Site compatible avec hébergement statique ; les favoris sont locaux à chaque navigateur.
+Dans GitHub : **Settings → Pages → Source : GitHub Actions**, puis **Actions → Update game index → Run workflow**. L'index est construit et commité, ce qui déclenche normalement le workflow Pages. Si les nouvelles données ne se publient pas, inspecter les logs des deux workflows. Permissions du workflow d'index : `contents: write` et autorisation GitHub de création de commits par Actions.
+
+Le token `secrets.GITHUB_TOKEN` utilisé par GitHub Actions est fourni automatiquement par GitHub. **Ne crée pas de Personal Access Token, ne copie jamais de secret dans le code.**
+
+## Tester localement
+
+```bash
+python -m http.server 8000
+# http://localhost:8000/
+python scripts/build_index.py  # nécessite Internet pour actualiser
+```
+
+## Ajouter manuellement un jeu ou une jaquette
+
+Modifier `data/curated.json` :
+
+```json
+{"name":"Nom du jeu","demos":["https://adresse-officielle.example/"],"platforms":["PS2"],"tags":["Combat"],"image":"https://image-autorisée.example/visuel.jpg"}
+```
+
+Ne pas intégrer de matériel protégé sans autorisation. Le site n'utilise pas de base de données payante.
