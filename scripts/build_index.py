@@ -22,16 +22,28 @@ SOURCES = [
     dict(id='browser',name='Awesome Browser Game Ports',url='https://raw.githubusercontent.com/bitburner/Awesome-Browser-Game-Ports/main/README.md',format='browser',site='https://github.com/bitburner/Awesome-Browser-Game-Ports'),
 ]
 LINK = re.compile(r'\[([^\]]+)\]\((https?://[^)\s]+)(?:\s+"[^"]*")?\)')
-HEADERS={'User-Agent':'GamePortFinder/2.0 (public-source-index)','Accept':'application/vnd.github+json'}
-TOKEN=os.environ.get('GITHUB_TOKEN','')
-if TOKEN: HEADERS['Authorization']='Bearer '+TOKEN
+# Headers are scoped per provider. Never send the GitHub token to RAWG or other hosts.
+USER_AGENT = 'GamePortFinder/3.1 (+https://github.com/kazuzu92/gameport-finder)'
+TOKEN = os.environ.get('GITHUB_TOKEN', '')
+HEADERS = {'User-Agent': USER_AGENT, 'Accept': 'application/json'}
+
+def headers_for(url):
+    hostname = (urllib.parse.urlsplit(url).hostname or '').lower()
+    headers = dict(HEADERS)
+    if hostname == 'api.github.com':
+        headers['Accept'] = 'application/vnd.github+json'
+        headers['X-GitHub-Api-Version'] = '2022-11-28'
+        if TOKEN:
+            headers['Authorization'] = 'Bearer ' + TOKEN
+    return headers
 QUERIES=['browser game port wasm in:name,description,readme','webassembly game port in:description','game decompilation web browser in:description','topic:browser-game','topic:webassembly-game']
 PLATFORMS=['PS1','PS2','PS3','PS4','PS5','PSP','PS Vita','Wii','Wii U','GameCube','Nintendo DS','Nintendo 3DS','Nintendo 64','SNES','NES','GBA','Game Boy','Xbox 360','Xbox','Dreamcast','Arcade','PC','Android']
 RULES=[('PS1',r'\b(?:ps1|psx|playstation\s*1)\b'),('PS2',r'\b(?:ps2|playstation\s*2)\b'),('PS3',r'\b(?:ps3|playstation\s*3)\b'),('PSP',r'\bpsp\b'),('GameCube',r'\bgame\s*cube\b'),('Wii',r'\bwii\b'),('Nintendo DS',r'\b(?:nintendo\s*ds|nds)\b'),('Nintendo 64',r'\b(?:n64|nintendo\s*64)\b'),('GBA',r'\b(?:gba|game\s*boy\s*advance)\b'),('SNES',r'\b(?:snes|super\s*nintendo)\b'),('PC',r'\b(?:windows|pc\s*game|dos\s*game)\b')]
 
-def request(url,timeout=20,method='GET'):
-    req=urllib.request.Request(url,headers=HEADERS,method=method)
-    with urllib.request.urlopen(req,timeout=timeout) as r:return r.read().decode('utf-8','replace')
+def request(url, timeout=20, method='GET'):
+    req = urllib.request.Request(url, headers=headers_for(url), method=method)
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        return response.read().decode('utf-8', 'replace')
 
 def safeurl(value):
     try:
