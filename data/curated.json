@@ -5,3 +5,92 @@
  {"name":"Quake III Arena","demos":["https://q3.pieter.com/"],"platforms":["PC"],"tags":["FPS","Multijoueur"]},
  {"name":"Command & Conquer: Red Alert 2 - Chrono Divide","demos":["https://chronodivide.com/"],"platforms":["PC"],"tags":["Stratégie"]}
 ]
+[
+  {
+    "name": "Dragon Ball Z: Budokai Tenkaichi 3",
+    "demos": ["https://dragonballbt3.online/"],
+    "platforms": ["PS2", "Wii"],
+    "tags": ["Manga", "Combat"]
+  },
+  {
+    "name": "Pro Evolution Soccer 6",
+    "demos": ["https://pes6.optijuegos.net/"],
+    "platforms": ["PS2", "PC"],
+    "tags": ["Sport", "Football"]
+  },
+  {
+    "name": "Skate 3 (fan game)",
+    "demos": ["https://skate.aaddpp.lol/"],
+    "platforms": ["Navigateur"],
+    "tags": ["Sport", "Fan game"]
+  },
+  {
+    "name": "Quake III Arena",
+    "demos": ["https://q3.pieter.com/"],
+    "platforms": ["PC"],
+    "tags": ["FPS", "Multijoueur"]
+  },
+  {
+    "name": "Command & Conquer: Red Alert 2 - Chrono Divide",
+    "demos": ["https://chronodivide.com/"],
+    "platforms": ["PC"],
+    "tags": ["Stratégie"]
+  },
+  {
+    "name": "Need for Speed: Underground 2",
+    "demos": ["https://nfsu2.xyz/"],
+    "repos": ["https://github.com/th0mk/nfsu2-web"],
+    "platforms": ["PC"],
+    "tags": ["Course", "Portage navigateur", "WebGPU", "Multijoueur", "Projet non officiel"],
+    "description": "Portage non officiel du jeu PC dans le navigateur, avec WebAssembly, WebGPU et fonctionnalités multijoueurs. Consultez le projet pour ses exigences en fichiers du jeu et en navigateur."
+  },
+  {
+    "name": "Need for Speed: Most Wanted (2005)",
+    "demos": ["https://dezm0n.itch.io/nfs-most-wanted-web-port"],
+    "platforms": ["PC"],
+    "tags": ["Course", "Portage navigateur expérimental", "WebGPU", "Projet non officiel"],
+    "description": "Portage navigateur expérimental du Need for Speed Most Wanted de 2005. Chrome ou Edge avec WebGPU requis ; le mode carrière complet et les sauvegardes nécessitent encore des tests."
+  },
+  {
+    "name": "Def Jam: Fight for NY",
+    "repos": ["https://github.com/vyanhursky/DefJamFFNY-recomp"],
+    "platforms": ["PC"],
+    "tags": ["Combat", "Recompilation", "PC uniquement", "Copie Xbox requise", "Pas jouable sur navigateur"],
+    "description": "Portage natif non officiel pour Windows, macOS et Linux. Ce n'est PAS une version navigateur ; nécessite une copie compatible du jeu Xbox d'origine."
+  },
+  {
+    "name": "Def Jam: Fight for NY Online",
+    "repos": ["https://github.com/sweeax-exe/ffny-online"],
+    "platforms": ["PC"],
+    "tags": ["Combat", "Multijoueur", "PC uniquement", "Copie Xbox requise", "Pas jouable sur navigateur"],
+    "description": "Projet communautaire ajoutant du multijoueur au portage PC de Def Jam Fight for NY. Installation Windows et copie compatible du jeu requises ; pas un portage navigateur."
+  },
+  {
+    "name": "Def Jam Vendetta",
+    "repos": ["https://github.com/jcsix694/def-jam-vendetta-recomp"],
+    "platforms": ["PC"],
+    "tags": ["Combat", "Recompilation", "PC uniquement", "Copie PS2 requise", "Pas jouable sur navigateur"],
+    "description": "Projet non officiel de recompilation PS2 pour PC, à construire depuis une copie personnelle du jeu. Aucune version navigateur confirmée."
+  },
+  {
+    "name": "LEGO Island",
+    "demos": ["https://isle.pizza/"],
+    "platforms": ["PC"],
+    "tags": ["Aventure", "Portage navigateur", "WebAssembly"],
+    "description": "Portage navigateur du jeu PC de 1997. Fonctionne sur les navigateurs récents ; manette et contrôles tactiles pris en charge."
+  },
+  {
+    "name": "God of War: Chains of Olympus (PSP Web Recomp)",
+    "repos": ["https://github.com/snuri00/psp-web-recomp"],
+    "platforms": ["PSP"],
+    "tags": ["Action", "Aventure", "Prototype", "WebAssembly", "Fichiers originaux requis"],
+    "description": "Recompilation expérimentale pour jouer dans un navigateur après construction locale à partir des fichiers PSP originaux. Pas de site Jouer prêt à l'emploi."
+  },
+  {
+    "name": "Gran Turismo 4 (PS2 Web Recomp)",
+    "repos": ["https://github.com/snuri00/ps2-web-recomp"],
+    "platforms": ["PS2"],
+    "tags": ["Course", "Prototype", "WebAssembly", "Fichiers originaux requis"],
+    "description": "Projet de recompilation PS2 en WebAssembly. Nécessite la création de sa propre version web depuis une copie originale ; pas de jeu immédiatement accessible."
+  }
+]
